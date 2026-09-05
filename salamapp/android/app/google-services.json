@@ -10,7 +10,7 @@
       "client_info": {
         "mobilesdk_app_id": "1:225862888805:android:bbf4d06df8a0b57e6f058c",
         "android_client_info": {
-          "package_name": "com.bgmiuc"
+          "package_name": "com.example.salamapp"
         }
       },
       "oauth_client": [
@@ -142,7 +142,7 @@
       "client_info": {
         "mobilesdk_app_id": "1:225862888805:android:22311a25c8512dd56f058c",
         "android_client_info": {
-          "package_name": "com.example.salamapp"
+          "package_name": "com.example.salamapps"
         }
       },
       "oauth_client": [
