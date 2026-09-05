@@ -26,24 +26,161 @@ jobs:
           java-version: '11'
           cache: 'gradle'
 
-      - name: Set up Compatible Flutter (3.3.10)
+      - name: Set up Flutter (3.3.10)
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.3.10'
           cache: true
 
-      - name: Auto Fix & Clean Environment
+      - name: Auto-Fix Deprecated Widgets (FlatButton / RaisedButton)
+        run: |
+          python3 -c "
+          import os
+
+          flat_button_shim = '''
+          // --- AUTO-GENERATED FLATBUTTON COMPATIBILITY SHIM ---
+          class FlatButton extends StatelessWidget {
+            final VoidCallback? onPressed;
+            final VoidCallback? onLongPress;
+            final Widget? child;
+            final Color? color;
+            final Color? textColor;
+            final Color? disabledColor;
+            final Color? disabledTextColor;
+            final EdgeInsetsGeometry? padding;
+            final ShapeBorder? shape;
+            final Clip clipBehavior;
+            final FocusNode? focusNode;
+            final bool autofocus;
+            final MaterialTapTargetSize? materialTapTargetSize;
+            final double? minWidth;
+            final double? height;
+
+            const FlatButton({
+              Key? key,
+              required this.onPressed,
+              this.onLongPress,
+              this.child,
+              this.color,
+              this.textColor,
+              this.disabledColor,
+              this.disabledTextColor,
+              this.padding,
+              this.shape,
+              this.clipBehavior = Clip.none,
+              this.focusNode,
+              this.autofocus = false,
+              this.materialTapTargetSize,
+              this.minWidth,
+              this.height,
+            }) : super(key: key);
+
+            FlatButton.icon({
+              Key? key,
+              required this.onPressed,
+              this.onLongPress,
+              required Widget icon,
+              required Widget label,
+              this.color,
+              this.textColor,
+              this.disabledColor,
+              this.disabledTextColor,
+              this.padding,
+              this.shape,
+              this.clipBehavior = Clip.none,
+              this.focusNode,
+              this.autofocus = false,
+              this.materialTapTargetSize,
+              this.minWidth,
+              this.height,
+            }) : child = Row(mainAxisSize: MainAxisSize.min, children: [icon, const SizedBox(width: 8), label]),
+                 super(key: key);
+
+            @override
+            Widget build(BuildContext context) {
+              return TextButton(
+                onPressed: onPressed,
+                onLongPress: onLongPress,
+                style: TextButton.styleFrom(
+                  backgroundColor: color,
+                  foregroundColor: textColor,
+                  padding: padding,
+                  shape: shape is OutlinedBorder ? shape as OutlinedBorder : null,
+                ),
+                child: child ?? const SizedBox.shrink(),
+              );
+            }
+          }
+          '''
+
+          raised_button_shim = '''
+          // --- AUTO-GENERATED RAISEDBUTTON COMPATIBILITY SHIM ---
+          class RaisedButton extends StatelessWidget {
+            final VoidCallback? onPressed;
+            final Widget? child;
+            final Color? color;
+            final Color? textColor;
+            final EdgeInsetsGeometry? padding;
+            final ShapeBorder? shape;
+            final double? elevation;
+
+            const RaisedButton({
+              Key? key,
+              required this.onPressed,
+              this.child,
+              this.color,
+              this.textColor,
+              this.padding,
+              this.shape,
+              this.elevation,
+            }) : super(key: key);
+
+            @override
+            Widget build(BuildContext context) {
+              return ElevatedButton(
+                onPressed: onPressed,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: color,
+                  foregroundColor: textColor,
+                  padding: padding,
+                  elevation: elevation,
+                  shape: shape is OutlinedBorder ? shape as OutlinedBorder : null,
+                ),
+                child: child ?? const SizedBox.shrink(),
+              );
+            }
+          }
+          '''
+
+          for root, _, files in os.walk('lib'):
+              for file in files:
+                  if file.endswith('.dart'):
+                      filepath = os.path.join(root, file)
+                      with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
+                          code = f.read()
+                      to_append = ''
+                      if 'FlatButton' in code and 'class FlatButton' not in code:
+                          to_append += '\n' + flat_button_shim
+                      if 'RaisedButton' in code and 'class RaisedButton' not in code:
+                          to_append += '\n' + raised_button_shim
+                      if to_append:
+                          print(f'Patching deprecated buttons in: {filepath}')
+                          with open(filepath, 'a', encoding='utf-8') as f:
+                              f.write(to_append)
+          "
+
+      - name: Clean Cache
         run: |
           flutter clean
           rm -f pubspec.lock
 
-      - name: Install Dependencies
+      - name: Fetch Dependencies
         run: flutter pub get
 
       - name: Build Release APK
         run: flutter build apk --release --no-tree-shake-icons
 
-      - name: Upload Release APK
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: salamapp-release-apk
