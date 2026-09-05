@@ -11,7 +11,6 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
-    # Flutter project salamapp folder ke andar hone ke karan default path set kiya hai
     defaults:
       run:
         working-directory: salamapp
@@ -27,17 +26,20 @@ jobs:
           java-version: '17'
           cache: 'gradle'
 
-      - name: Set up Flutter
+      - name: Set up Flutter (Locked Stable Version)
         uses: subosito/flutter-action@v2
         with:
-          channel: 'stable'
+          flutter-version: '3.19.6'
           cache: true
+
+      - name: Clean Project Cache
+        run: flutter clean
 
       - name: Install Dependencies
         run: flutter pub get
 
       - name: Build Release APK
-        run: flutter build apk --release
+        run: flutter build apk --release --no-tree-shake-icons
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
