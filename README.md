@@ -1,2 +1,2 @@
-# Al-huda
-App
+# Salam App   (prayer reminder, quran recitation, zakat calc)
+ 
