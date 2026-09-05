@@ -32,13 +32,26 @@ jobs:
           flutter-version: '3.3.10'
           cache: true
 
-      - name: Auto-Fix Deprecated Widgets (FlatButton / RaisedButton)
+      - name: Auto-Patch Project (Kotlin Version & Deprecated Widgets)
         run: |
           python3 -c "
-          import os
+          import os, re
 
+          # 1. Auto-Fix Kotlin Version in android/build.gradle
+          gradle_path = 'android/build.gradle'
+          if os.path.exists(gradle_path):
+              with open(gradle_path, 'r', encoding='utf-8') as f:
+                  g_content = f.read()
+              if 'kotlin_version' in g_content:
+                  g_content = re.sub(r'(ext\.)?kotlin_version\s*=\s*[\'\"][^\'\"]+[\'\"]', \"ext.kotlin_version = '1.8.22'\", g_content)
+              else:
+                  g_content = g_content.replace('buildscript {', \"buildscript {\n    ext.kotlin_version = '1.8.22'\")
+              with open(gradle_path, 'w', encoding='utf-8') as f:
+                  f.write(g_content)
+              print('Patched Kotlin version to 1.8.22')
+
+          # 2. Auto-Fix FlatButton / RaisedButton compatibility
           flat_button_shim = '''
-          // --- AUTO-GENERATED FLATBUTTON COMPATIBILITY SHIM ---
           class FlatButton extends StatelessWidget {
             final VoidCallback? onPressed;
             final VoidCallback? onLongPress;
@@ -114,7 +127,6 @@ jobs:
           '''
 
           raised_button_shim = '''
-          // --- AUTO-GENERATED RAISEDBUTTON COMPATIBILITY SHIM ---
           class RaisedButton extends StatelessWidget {
             final VoidCallback? onPressed;
             final Widget? child;
@@ -164,7 +176,6 @@ jobs:
                       if 'RaisedButton' in code and 'class RaisedButton' not in code:
                           to_append += '\n' + raised_button_shim
                       if to_append:
-                          print(f'Patching deprecated buttons in: {filepath}')
                           with open(filepath, 'a', encoding='utf-8') as f:
                               f.write(to_append)
           "
@@ -180,7 +191,7 @@ jobs:
       - name: Build Release APK
         run: flutter build apk --release --no-tree-shake-icons
 
-      - name: Upload APK
+      - name: Upload Release APK
         uses: actions/upload-artifact@v4
         with:
           name: salamapp-release-apk
